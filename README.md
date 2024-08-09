@@ -27,9 +27,11 @@ We use **4 dockers**
 - springboot/REST backend application
 - name: tutbackend
 - depends on: tutpostgresql
+- toegang: via 'http://localhost:8080/api/heartbeat'
 
 ## tutreactts
 
 - React Typescript frontend application
 - name: tutfrontend
 - depends on: tutbackend
+- toegang: via 'http://localhost:3000/'

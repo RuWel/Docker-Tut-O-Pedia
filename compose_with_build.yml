@@ -1,0 +1,65 @@
+services:
+  db:
+    image: postgres
+    container_name: tutpostgresql
+    restart: always
+    user: postgres
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_DB: tutdb
+      POSTGRES_HOST_AUTH_METHOD: trust
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready", "-d", "db_prod"]
+      interval: 30s
+      timeout: 60s
+      retries: 5
+      start_period: 80s
+    ports:
+      - 5432:5432
+    volumes:
+      - ./data:/var/lib/postgresql/data
+  Liquibase:
+    # Image to be pulled from Docker Hub
+    image: liquibase/liquibase
+    # Name of the container
+    container_name: tutliquibase
+    # Setting depends_on to PostgreSQL container to wait till the service is ready to accept connections
+    depends_on:
+      db:
+        condition: service_healthy
+    command: --defaults-file=/db/local/liquibase.properties --log-level=FINE update
+    # Volume to add the liquibase collection of scripts
+    volumes:
+      - ./db:/db
+  backend:
+    # Image to be pulled from Docker Hub
+    # Name of the container
+    container_name: tutbackend
+    # Setting depends_on to PostgreSQL container to wait till the service is ready to accept connections
+    build:
+      context: ../../BackEnd/tutopedia
+      dockerfile: ../../BackEnd/tutopedia/Dockerfile
+    healthcheck:
+      test: "curl --fail --silent localhost:8081/actuator/health | grep UP || exit 1"
+      interval: 20s
+      timeout: 5s
+      retries: 5
+      start_period: 40s
+    ports:
+      - 8080:8080
+    depends_on:
+      db:
+        condition: service_healthy
+  frontend:
+    container_name: tutreactts
+    restart: always
+    build:
+      context: ../../FrontEnd/ReactTS
+      dockerfile: ../../FrontEnd/ReactTS/Dockerfile
+    environment:
+      NODE_ENV: production
+    ports:
+      - 3000:3000
+    depends_on:
+      backend:
+        condition: service_healthy
